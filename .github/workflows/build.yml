@@ -7,14 +7,30 @@ on:
 
 
 jobs:
-  build:
+  build-analyze-scan:
     name: Build
-    runs-on: self-hosted
+    runs-on: [self-hosted]
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-      - uses: sonarsource/sonarqube-scan-action@master
+          fetch-depth: 0  # Shallow clone should be disabled for a better relevancy of analysis.
+      - name: Build and analyze with SonarQube    
+        uses: sonarsource/sonarqube-scan-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: Trivy File Scan
+        run: trivy fs . > trivyfs.txt
+
+      - name: Docker Build and Push
+        uses: mr-smithers-excellent/docker-build-push@v6
+        with:
+             image: simbudevops7497/swiggy-app
+             registry: docker.io
+             username: ${{ secrets.DOCKERHUB_USERNAME }}
+             password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Trivy Image Scan
+        run: trivy image simbudevops7497/swiggy-app > trivyimage.txt
