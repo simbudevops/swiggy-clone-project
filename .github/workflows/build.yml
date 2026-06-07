@@ -8,22 +8,23 @@ on:
 jobs:
   build-analyze-scan:
     name: Build
-    runs-on: [self-hosted]
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Build and analyze with SonarQube
+      - name: Build and Analyze with SonarQube
         uses: sonarsource/sonarqube-scan-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
       - name: Trivy File Scan
-        run: trivy fs . > trivyfs.txt
+        run: |
+          trivy fs . > trivyfs.txt
 
       - name: Docker Build and Push
         uses: mr-smithers-excellent/docker-build-push@v6
@@ -32,19 +33,43 @@ jobs:
           registry: docker.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+          tags: main-${{ github.sha }}
 
       - name: Show Docker Images
         run: docker images
 
       - name: Trivy Image Scan
-        run: trivy image simbudevops7497/swiggy-app:main-${GITHUB_SHA::7} > trivyimage.txt
-      
-      - name: Send a Slack Notification
+        run: |
+          trivy image simbudevops7497/swiggy-app:main-${{ github.sha }} > trivyimage.txt
+
+  Deploy:
+    name: Deploy to EKS
+    needs: build-analyze-scan
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Update kubeconfig
+        run: |
+          aws eks --region ap-south-1 update-kubeconfig --name simbu-cluster
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f deployment-and-service.yml
+
+      - name: Verify Deployment
+        run: |
+          kubectl get pods
+          kubectl get svc
+
+      - name: Send Slack Notification
         if: always()
         uses: act10ns/slack@v1
         with:
-           status: ${{ job.status }}
-           steps: ${{ toJson(steps) }}
-           channel: '#github-action'
+          status: ${{ job.status }}
+          steps: ${{ toJson(steps) }}
+          channel: '#github-action'
         env:
-           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}  
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
