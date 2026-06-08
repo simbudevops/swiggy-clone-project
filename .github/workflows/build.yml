@@ -40,7 +40,7 @@ jobs:
 
       - name: Trivy Image Scan
         run: |
-          trivy image simbudevops7497/swiggy-app:main-${{ github.sha }} > trivyimage.txt
+          trivy image simbudevops/swiggy-app:main-${{ github.sha }} > trivyimage.txt
 
   Deploy:
     name: Deploy to EKS
