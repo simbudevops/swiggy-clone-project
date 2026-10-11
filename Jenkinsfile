@@ -89,7 +89,7 @@ pipeline {
         stage('Deploy to Container') {
             steps {
                 sh 'docker rm -f swiggy || true'
-                sh 'docker run -d --name swiggy -p 3000:3000 simbudevops/swiggy:latest'
+                sh 'docker run -d --name swiggy -p 3001:3000 simbudevops/swiggy:latest'
             }
         }
     }
