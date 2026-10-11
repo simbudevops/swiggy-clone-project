@@ -67,12 +67,15 @@ pipeline {
 
         stage('Docker Build & Push') {
             steps {
-                script {
-                    withDockerRegistry(credentialsId: 'dockerhub-creds', toolName: 'docker') {
-                        sh 'docker build -t swiggy .'
-                        sh 'docker tag swiggy simbudevops/swiggy:latest'
-                        sh 'docker push simbudevops/swiggy:latest'
-                    }
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
+                                                  usernameVariable: 'DOCKER_USER',
+                                                  passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker build -t swiggy .
+                        docker tag swiggy simbudevops/swiggy:latest
+                        docker push simbudevops/swiggy:latest
+                    '''
                 }
             }
         }
